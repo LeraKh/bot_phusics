@@ -98,7 +98,7 @@ class QuizStates(StatesGroup):
 
 
 # Вопросы
-QUESTIONS = [
+QUESTIONS_EGE = [
     {
         "text": (
             "📌 **Вопрос 1 (Механика):**\n"
@@ -110,7 +110,7 @@ QUESTIONS = [
             ("9.8 м/с² (направлено вниз)", 1),
             ("Зависит от массы камня", 0),
         ],
-        "explanation": "💡 *В наивысшей точке скорость равна 0, но сила тяжести никуда не исчезает! По 2 закону Ньютона ускорение равно g ≈ 9.8 м/с² вниз.*",
+        "explanation": "💡 *В наивысшей точке скорость равна 0, но сила тяжести действует непрерывно: g ≈ 9.8 м/с² вниз.*",
     },
     {
         "text": (
@@ -122,7 +122,7 @@ QUESTIONS = [
             ("Не изменяется", 1),
             ("Уменьшается", 0),
         ],
-        "explanation": "💡 *Внутренняя энергия идеального газа зависит ТОЛЬКО от температуры (U = 3/2 νRT). Если процесс изотермический (T = const), то ΔU = 0.*",
+        "explanation": "💡 *Внутренняя энергия идеального газа зависит только от температуры (U = 3/2 νRT). При T = const ΔU = 0.*",
     },
     {
         "text": (
@@ -134,7 +134,47 @@ QUESTIONS = [
             ("Уменьшилось в 4 раза", 1),
             ("Не изменилось", 0),
         ],
-        "explanation": "💡 *Ловушка ЕГЭ! При складывании вдвое длина L уменьшается в 2 раза, а площадь сечения S увеличивается в 2 раза. По формуле R = ρL/S сопротивление падает в 4 раза.*",
+        "explanation": "💡 *Ловушка ЕГЭ: длина L уменьшилась в 2 раза, а площадь S выросла в 2 раза. По формуле R = ρL/S сопротивление падает в 4 раза.*",
+    },
+]
+
+QUESTIONS_OGE = [
+    {
+        "text": (
+            "📌 **Вопрос 1 (Механика):**\n"
+            "Камень бросили вертикально вверх. Чему равно его ускорение в наивысшей точке траектории?\n"
+            "(сопротивлением воздуха пренебречь)"
+        ),
+        "options": [
+            ("0 м/с²", 0),
+            ("9.8 м/с² (направлено вниз)", 1),
+            ("Зависит от массы камня", 0),
+        ],
+        "explanation": "💡 *В наивысшей точке скорость равна 0, но ускорение свободного падения всегда равно g ≈ 9.8 м/с² вниз.*",
+    },
+    {
+        "text": (
+            "📌 **Вопрос 2 (Тепловые явления):**\n"
+            "Вода в открытом сосуде активно кипит при постоянном нагреве. Как меняется её температура?"
+        ),
+        "options": [
+            ("Увеличивается", 0),
+            ("Не изменяется", 1),
+            ("Уменьшается", 0),
+        ],
+        "explanation": "💡 *Ловушка ОГЭ: во время фазового перехода (кипения) вся подводимая энергия расходуется на парообразование, температура остаётся постоянной.*",
+    },
+    {
+        "text": (
+            "📌 **Вопрос 3 (Электричество):**\n"
+            "Медный проводник сложили вдвое. Как изменилось его электрическое сопротивление?"
+        ),
+        "options": [
+            ("Уменьшилось в 2 раза", 0),
+            ("Уменьшилось в 4 раза", 1),
+            ("Не изменилось", 0),
+        ],
+        "explanation": "💡 *При складывании длина L падает вдвое, а сечение S удваивается. По формуле R = ρL/S сопротивление падает в 4 раза.*",
     },
 ]
 
@@ -172,7 +212,8 @@ async def process_exam_choice(callback: types.CallbackQuery, state: FSMContext):
     exam = "ЕГЭ" if "ege" in callback.data else "ОГЭ"
     await state.update_data(exam=exam, score=0)
 
-    q = QUESTIONS[0]
+    questions = QUESTIONS_EGE if exam == "ЕГЭ" else QUESTIONS_OGE
+    q = questions[0]
     kb = InlineKeyboardMarkup(
         inline_keyboard=[[InlineKeyboardButton(text=opt[0], callback_data=f"ans_0_{opt[1]}")] for opt in q["options"]]
     )
@@ -184,19 +225,22 @@ async def process_exam_choice(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(QuizStates.q1)
 
 
-# Универсальный маршрутизатор шагов квиза и подсчета баллов
+# Универсальный маршрутизатор шагов и подсчета баллов
 async def handle_question(callback: types.CallbackQuery, state: FSMContext, current_q_idx: int, next_state: State):
     _, q_idx, points = callback.data.split("_")
     data = await state.get_data()
     new_score = data.get("score", 0) + int(points)
     await state.update_data(score=new_score)
 
-    explanation = QUESTIONS[int(q_idx)]["explanation"]
+    exam = data.get("exam", "ЕГЭ")
+    questions = QUESTIONS_EGE if exam == "ЕГЭ" else QUESTIONS_OGE
+
+    explanation = questions[int(q_idx)]["explanation"]
     verdict = "✅ **Верно!**" if int(points) == 1 else "❌ **Ошибка!**"
     await callback.message.answer(f"{verdict}\n{explanation}", parse_mode="Markdown")
 
-    if current_q_idx < len(QUESTIONS) - 1:
-        next_q = QUESTIONS[current_q_idx + 1]
+    if current_q_idx < len(questions) - 1:
+        next_q = questions[current_q_idx + 1]
         kb = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(text=opt[0], callback_data=f"ans_{current_q_idx+1}_{opt[1]}")]
@@ -229,7 +273,10 @@ async def ans_q3(callback: types.CallbackQuery, state: FSMContext):
     total_score = data.get("score", 0) + int(points)
     await state.update_data(score=total_score)
 
-    explanation = QUESTIONS[2]["explanation"]
+    exam = data.get("exam", "ЕГЭ")
+    questions = QUESTIONS_EGE if exam == "ЕГЭ" else QUESTIONS_OGE
+
+    explanation = questions[2]["explanation"]
     verdict = "✅ **Верно!**" if int(points) == 1 else "❌ **Ошибка!**"
     await callback.message.answer(f"{verdict}\n{explanation}", parse_mode="Markdown")
     await finish_quiz(callback.message, state, total_score)
@@ -274,10 +321,6 @@ async def finish_quiz(message: types.Message, state: FSMContext, score: int):
     offer_text = (
         f"📊 **Результаты диагностики ({exam}):**\n\n"
         f"{diagnostics}\n\n"
-        "🎁 **Спецпредложение для вас:**\n"
-        "Мы дарим доступ к бесплатному **индивидуальному разбору ваших ошибок с экспертом ОГЭ/ЕГЭ** (30 минут онлайн) + "
-        "чек-лист «Топ-20 ловушек составителей экзамена».\n\n"
-        "Отправьте контакт кнопкой ниже или напишите номер телефона в чат:"
     )
 
     await message.answer(offer_text, reply_markup=contact_kb, parse_mode="Markdown")
@@ -353,7 +396,7 @@ async def admin_panel(message: types.Message):
     await message.answer(report, parse_mode="Markdown")
 
 
-# Модуль рассылки по базе лидов
+# Рассылка по базе лидов
 @dp.message(Command("broadcast"))
 async def broadcast_msg(message: types.Message):
     if message.from_user.id != ADMIN_ID:
