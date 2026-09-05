@@ -15,7 +15,7 @@ from aiogram.types import (
     ReplyKeyboardRemove,
 )
 
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8822167411:AAEkwDSwZQK7hDAQEyOlAGjDqV05dGZVUYg")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "token")
 ADMIN_ID = int(os.getenv("ADMIN_ID", 6457087349))
 
 bot = Bot(token=BOT_TOKEN)
