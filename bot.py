@@ -20,11 +20,8 @@ from aiogram.types import (
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8822167411:AAEkwDSwZQK7hDAQEyOlAGjDqV05dGZVUYg")
 ADMIN_ID = int(os.getenv("ADMIN_ID", 6457087349))
 
-# Подключение через стабильный прокси-шлюз для обхода WinError 121 (таймаут семафора)
-session = AiohttpSession(
-    api=TelegramAPIServer.from_base("https://api.telegram-proxy.app")
-)
-bot = Bot(token=BOT_TOKEN, session=session)
+
+bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
 # --- База данных (SQLite) ---
